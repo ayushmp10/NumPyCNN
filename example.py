@@ -53,7 +53,7 @@ dense_layer2 = pygad.cnn.Dense(num_neurons=num_classes,
                                activation_function="softmax")
 
 model = pygad.cnn.Model(last_layer=dense_layer2,
-                        epochs=1,
+                        epochs=3,
                         learning_rate=0.01)
 
 model.summary()
@@ -70,3 +70,24 @@ accuracy = 100 * (num_correct/train_outputs.size)
 print("Number of correct classifications : {num_correct}.".format(num_correct=num_correct))
 print("Number of wrong classifications : {num_wrong}.".format(num_wrong=num_wrong.size))
 print("Classification accuracy : {accuracy}.".format(accuracy=accuracy))
+
+def train(self, train_inputs, train_outputs):
+    ...
+    for epoch in range(self.epochs):
+        print("Epoch {epoch}".format(epoch=epoch))
+        network_predictions = []
+        network_error = 0
+        
+        for sample_idx in range(train_inputs.shape[0]):
+            self.feed_sample(train_inputs[sample_idx, :])
+            predicted_label = numpy.where(numpy.max(self.last_layer.layer_output) == self.last_layer.layer_output)[0][0]
+            network_predictions.append(predicted_label)
+            network_error += abs(predicted_label - train_outputs[sample_idx])
+
+        # Calculate accuracy after each epoch
+        num_wrong = numpy.where(network_predictions != train_outputs)[0]
+        num_correct = train_outputs.size - num_wrong.size
+        accuracy = 100 * (num_correct / train_outputs.size)
+        print("Epoch {epoch} - Number of correct classifications: {num_correct}, Accuracy: {accuracy:.2f}%".format(epoch=epoch, num_correct=num_correct, accuracy=accuracy))
+        
+        self.update_weights(network_error)
