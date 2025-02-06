@@ -8,11 +8,24 @@ from itertools import product
 plt.rc('figure', autolayout=True)
 plt.rc('image', cmap='magma')
 
-# define the kernel
-kernel = tf.constant([[-1, -1, -1],
-                    [-1,  8, -1],
-                    [-1, -1, -1],
-                   ])
+# Define multiple filters instead of a single kernel
+kernels = tf.constant([
+    [[[-1.0], [-1.0], [-1.0]],  # Edge detection
+     [[-1.0], [8.0], [-1.0]],
+     [[-1.0], [-1.0], [-1.0]]],
+
+    [[[0.0], [-1.0], [0.0]],  # Sobel filter (vertical edges)
+     [[-1.0], [4.0], [-1.0]],
+     [[0.0], [-1.0], [0.0]]],
+
+    [[[-1.0], [0.0], [1.0]],  # Sobel filter (horizontal edges)
+     [[-2.0], [0.0], [2.0]],
+     [[-1.0], [0.0], [1.0]]]
+])
+
+# Convert to TensorFlow format
+kernels = tf.reshape(kernels, [3, 3, 1, 3])  # Three filters
+kernels = tf.cast(kernels, dtype=tf.float32)
 
 # load the image
 image = tf.io.read_file('dog.jpg')
@@ -25,61 +38,57 @@ plt.figure(figsize=(5, 5))
 plt.imshow(img, cmap='gray')
 plt.axis('off')
 plt.title('Original Gray Scale image')
-plt.show();
-
+plt.show()
 
 # Reformat
 image = tf.image.convert_image_dtype(image, dtype=tf.float32)
 image = tf.expand_dims(image, axis=0)
-kernel = tf.reshape(kernel, [*kernel.shape, 1, 1])
-kernel = tf.cast(kernel, dtype=tf.float32)
 
-# convolution layer
-conv_fn = tf.nn.conv2d
-
-image_filter = conv_fn(
-    input=image,
-    filters=kernel,
-    strides=1, # or (1, 1)
-    padding='SAME',
-)
+# Apply convolution with multiple filters
+image_filter = tf.nn.conv2d(image, filters=kernels, strides=1, padding='SAME')
 
 plt.figure(figsize=(15, 5))
 
-# Plot the convolved image
-plt.subplot(1, 3, 1)
+# Plot the convolved images for each filter
+for i in range(kernels.shape[0]):
+    plt.subplot(1, 3, i + 1)
+    plt.imshow(tf.squeeze(image_filter[0, :, :, i]))
+    plt.axis('off')
+    plt.title(f'Convolution with Filter {i + 1}')
 
-plt.imshow(
-    tf.squeeze(image_filter)
-)
-plt.axis('off')
-plt.title('Convolution')
+plt.show()
 
 # activation layer
 relu_fn = tf.nn.relu
 # Image detection
 image_detect = relu_fn(image_filter)
 
-plt.subplot(1, 3, 2)
-plt.imshow(
-    # Reformat for plotting
-    tf.squeeze(image_detect)
-)
+plt.figure(figsize=(15, 5))
 
-plt.axis('off')
-plt.title('Activation')
+# Plot the activated images
+for i in range(kernels.shape[0]):
+    plt.subplot(1, 3, i + 1)
+    plt.imshow(tf.squeeze(image_detect[0, :, :, i]))
+    plt.axis('off')
+    plt.title(f'Activation with Filter {i + 1}')
+
+plt.show()
 
 # Pooling layer
 pool = tf.nn.pool
 image_condense = pool(input=image_detect, 
-                             window_shape=(2, 2),
-                             pooling_type='MAX',
-                             strides=(2, 2),
-                             padding='SAME',
-                            )
+                      window_shape=(2, 2),
+                      pooling_type='MAX',
+                      strides=(2, 2),
+                      padding='SAME')
 
-plt.subplot(1, 3, 3)
-plt.imshow(tf.squeeze(image_condense))
-plt.axis('off')
-plt.title('Pooling')
+plt.figure(figsize=(15, 5))
+
+# Plot the pooled images
+for i in range(kernels.shape[0]):
+    plt.subplot(1, 3, i + 1)
+    plt.imshow(tf.squeeze(image_condense[0, :, :, i]))
+    plt.axis('off')
+    plt.title(f'Pooling with Filter {i + 1}')
+
 plt.show()
